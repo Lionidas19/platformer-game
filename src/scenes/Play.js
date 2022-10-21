@@ -1,9 +1,7 @@
 
 import Phaser from 'phaser';
 import Player from '../entities/Player';
-//import Enemies from '../groups/Enemies';
-
-import {getEnemyTypes} from '../types';
+import Enemies from '../groups/Enemies';
 
 class Play extends Phaser.Scene
 {
@@ -47,7 +45,7 @@ class Play extends Phaser.Scene
         const environment = map.createStaticLayer('environment', tileset);
         const platform_colliders = map.createStaticLayer('platform_colliders', tileset);
         const platforms = map.createStaticLayer('platforms', tileset);
-        const playerZones = map.getObjectLayer('player_zones').objects;
+        const playerZones = map.getObjectLayer('player_zones');
         const enemySpawns = map.getObjectLayer('enemy_spawns');
         
         platform_colliders.setCollisionByProperty({collides: true});
@@ -62,22 +60,16 @@ class Play extends Phaser.Scene
 
     createEnemies (spawnLayer)
     {
-        const enemyTypes = getEnemyTypes();
-        // const enemies = new Enemies(this);
-        // const enemyTypes = enemies.getTypes();
-        
-        // spawnLayer.objects.forEach(spawnPoint => {
-        //     const enemy = new enemyTypes[spawnPoint.type](this, spawnPoint.x, spawnPoint.y);
-        //     enemies.add(enemy);
-        // })
-        
-        return spawnLayer.objects.map(spawnPoint => {
-            const enemy = enemyTypes[spawnPoint.type];
-            debugger;
-            return new enemyTypes[spawnPoint.type](this, spawnPoint.x, spawnPoint.y);
+        const enemies = new Enemies(this);
+        const enemyTypes = enemies.getTypes();
+        debugger;        
+
+        spawnLayer.objects.forEach(spawnPoint => {
+            const enemy = new enemyTypes[spawnPoint.properties[0].value](this, spawnPoint.x, spawnPoint.y);
+            enemies.add(enemy);
         })
 
-        //return enemies;
+        return enemies;
     }
 
     createPlayerColliders(player, { colliders })
@@ -103,7 +95,7 @@ class Play extends Phaser.Scene
 
     getPlayerZones(playerZonesLayer)
     {
-        const playerZones = playerZonesLayer;
+        const playerZones = playerZonesLayer.objects;
         return {
             start: playerZones.find(zone => zone.name === 'startZone'),
             end: playerZones.find(zone => zone.name === 'endZone')

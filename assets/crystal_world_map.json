@@ -166,6 +166,12 @@
                  "id":3,
                  "name":"Spawn",
                  "point":true,
+                 "properties":[
+                        {
+                         "name":"Type",
+                         "type":"string",
+                         "value":"Birdman"
+                        }],
                  "rotation":0,
                  "visible":true,
                  "width":0,
@@ -178,6 +184,12 @@
                  "id":4,
                  "name":"Spawn",
                  "point":true,
+                 "properties":[
+                        {
+                         "name":"Type",
+                         "type":"string",
+                         "value":"Birdman"
+                        }],
                  "rotation":0,
                  "visible":true,
                  "width":0,

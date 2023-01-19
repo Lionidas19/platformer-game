@@ -15,7 +15,7 @@ const SHARED_CONFIG = {
   width: WIDTH,
   height: HEIGHT, 
   zoomFactor: ZOOM_FACTOR,
-  degub: false,
+  degub: true,
   leftTopCorner: {
     x: (WIDTH - (WIDTH / ZOOM_FACTOR)) / 2,
     y: (HEIGHT - (HEIGHT / ZOOM_FACTOR)) / 2

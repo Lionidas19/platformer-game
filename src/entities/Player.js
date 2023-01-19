@@ -32,11 +32,12 @@ class Player extends Phaser.Physics.Arcade.Sprite
         this.jumpCount = 0;
         this.consecutiveJumps = 1;
         this.hasBeenHit = false;
+        this.isSliding = false;
         this.bounceVelocity = 250;
         this.cursors = this.scene.input.keyboard.createCursorKeys();
 
         this.lastDirection = Phaser.Physics.Arcade.FACING_RIGHT;
-        this.projectiles = new Projectiles(this.scene);
+        this.projectiles = new Projectiles(this.scene, 'iceball-1');
         this.meleeWeapon = new MeleeWeapon(this.scene, 0, 0, 'sword-default');
         this.timeFromLastSwing = null;
 
@@ -56,21 +57,9 @@ class Player extends Phaser.Physics.Arcade.Sprite
 
         initAnimations(this.scene.anims);
 
-        this.scene.input.keyboard.on('keydown-Q', () => {
-            this.play('throw', true);
-            this.projectiles.fireProjectile(this);
-        })
+        this.handleAttacks();
 
-        this.scene.input.keyboard.on('keydown-E', () => {
-
-            if(this.timeFromLastSwing && this.timeFromLastSwing + this.meleeWeapon.attackSpeed > getTimestamp()){
-                return;
-            }
-
-            this.play('throw', true);
-            this.meleeWeapon.swing(this);
-            this.timeFromLastSwing = getTimestamp();
-        })
+        this.handleMovements();
     }
 
     initEvents()
@@ -80,8 +69,8 @@ class Player extends Phaser.Physics.Arcade.Sprite
 
     update()
     {
-        if (this.hasBeenHit) { return; }
-        const { left, right, space, up } = this.cursors;
+        if (this.hasBeenHit || this.isSliding) { return; }
+        const { left, right, space} = this.cursors;
         const isSpaceJustDown = Phaser.Input.Keyboard.JustDown(space);
         const onFloor = this.body.onFloor();
 
@@ -113,7 +102,7 @@ class Player extends Phaser.Physics.Arcade.Sprite
             this.jumpCount = 0;
         }
 
-        if(this.isPlayingAnims('throw'))
+        if(this.isPlayingAnims('throw')|| this.isPlayingAnims('slide'))
         {
             return;
         }
@@ -122,6 +111,42 @@ class Player extends Phaser.Physics.Arcade.Sprite
             this.body.velocity.x !==0 ?
                 this.play('run', true) : this.play('idle', true) :
             this.play('jump', true)
+    }
+
+    handleAttacks(){
+        this.scene.input.keyboard.on('keydown-Q', () => {
+            this.play('throw', true);
+            this.projectiles.fireProjectile(this, 'iceball');
+        })
+
+        this.scene.input.keyboard.on('keydown-E', () => {
+
+            if(this.timeFromLastSwing && this.timeFromLastSwing + this.meleeWeapon.attackSpeed > getTimestamp()){
+                return;
+            }
+
+            this.play('throw', true);
+            this.meleeWeapon.swing(this);
+            this.timeFromLastSwing = getTimestamp();
+        })
+    }
+
+    handleMovements(){
+        this.scene.input.keyboard.on('keydown-DOWN', () => {
+            if(!this.body.onFloor()) {return;}
+
+            this.body.setSize(this.width, this.height / 2);
+            this.setOffset(0, this.height / 2);
+            this.setVelocityX(0);
+            this.play('slide', true);
+            this.isSliding = true;
+        })
+
+        this.scene.input.keyboard.on('keyup-DOWN', () => {
+            this.body.setSize(this.width, 38);
+            this.setOffset(0, 0);
+            this.isSliding = false;
+        })
     }
 
     playDamageTween()
@@ -143,15 +168,16 @@ class Player extends Phaser.Physics.Arcade.Sprite
         setTimeout(() => this.setVelocityY(-this.bounceVelocity), 0);
     }
 
-    takesHit (initiator)
+    takesHit (source)
     {
         if (this.hasBeenHit) { return; }
         this.hasBeenHit = true;
         this.bounceOff();
         const hitAnim = this.playDamageTween();
 
-        this.health -= initiator.damage;
+        this.health -= source.damage;
         this.hp.decrease(this.health);
+        source.deliversHit && source.deliversHit(this);
 
         this.scene.time.delayedCall(1000, () => {
             this.hasBeenHit = false,

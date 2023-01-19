@@ -1,6 +1,7 @@
 
 import Enemy from './Enemy';
 import initAnims from './anims/snakyAnims';
+import Projectiles from '../attacks/Projectiles';
 
 class Snaky extends Enemy
 {
@@ -14,6 +15,11 @@ class Snaky extends Enemy
         super.init();
         this.speed = 50;
 
+        this.projectiles = new Projectiles(this.scene, 'fireball-1');
+        this.timeFromLastAttack = 0;
+        this.attackDelay = this.getAttackDelay();
+        this.lastDirection = null;
+
         this.setSize(12, 45);
         this.setOffset(10, 15);
     }
@@ -22,11 +28,29 @@ class Snaky extends Enemy
     {
         super.update(time, delta);
 
+        if(this.body.velocity.x > 0){
+            this.lastDirection = Phaser.Physics.Arcade.FACING_RIGHT;
+        }
+        else{
+            this.lastDirection = Phaser.Physics.Arcade.FACING_LEFT;            
+        }
+
+        if(this.timeFromLastAttack + this.attackDelay <= time){
+            this.projectiles.fireProjectile(this, 'fireball');
+
+            this.timeFromLastAttack = time;
+            this.attackDelay = this.getAttackDelay();
+        }
+
         if (!this.active) { return; }
 
         if (this.isPlayingAnims('snaky-hurt')) { return; }
 
         this.play('snaky-idle', true);
+    }
+
+    getAttackDelay(){
+        return Phaser.Math.Between(1000, 4000);
     }
 
     takesHit(source)

@@ -2,6 +2,9 @@
 import Phaser from 'phaser';
 import Player from '../entities/Player';
 import Enemies from '../groups/Enemies';
+import Collectable from '../collectables/Collectable';
+import Collectables from '../groups/Collectables';
+import Hud from '../hud';
 
 import initAnims from '../anims/index';
 
@@ -16,15 +19,25 @@ class Play extends Phaser.Scene
 
     create ()
     {
+        this.score = 0;
+
+        this.hud = new Hud(this, 0, 0);
+
         const map = this.createMap();
+
+        initAnims(this.anims);
+
         const layers = this.createLayers(map);
         const playerZones = this.getPlayerZones(layers.playerZones);
         const player = this.createPlayer(playerZones.start);
         const enemies = this.createEnemies(layers.enemySpawns, layers.platform_colliders);
+        const collectables = this.createCollectables(layers.collectables);
 
         this.createPlayerColliders(player, {colliders: {
             platform_colliders: layers.platform_colliders,
-            projectiles: enemies.getProjectiles()
+            projectiles: enemies.getProjectiles(),
+            collectables,
+            traps: layers.traps
         }})
 
         this.createEnemyColliders(enemies, {colliders: {
@@ -33,7 +46,6 @@ class Play extends Phaser.Scene
 
         this.createEndOfLevel(playerZones.end, player);
         this.setupFollowupCameraOn(player);
-        initAnims(this.anims);
     }
 
     finishDrawing (pointer, layer)
@@ -68,15 +80,36 @@ class Play extends Phaser.Scene
     createLayers (map)
     {
         const tileset = map.getTileset('main_lev_build_1');
-        const environment = map.createStaticLayer('environment', tileset);
+        const environment = map.createStaticLayer('environment', tileset).setDepth(-2);
         const platform_colliders = map.createStaticLayer('platform_colliders', tileset);
         const platforms = map.createStaticLayer('platforms', tileset);
         const playerZones = map.getObjectLayer('player_zones');
         const enemySpawns = map.getObjectLayer('enemy_spawns');
+        const collectables = map.getObjectLayer('collectables');
+        const traps = map.createStaticLayer('traps', tileset);
         
         platform_colliders.setCollisionByProperty({collides: true});
         platform_colliders.setVisible(false);
-        return {environment, platforms, platform_colliders, playerZones, enemySpawns};
+        traps.setCollisionByExclusion(-1)
+
+        return {
+            environment,
+            platforms,
+            platform_colliders,
+            playerZones,
+            enemySpawns,
+            collectables,
+            traps
+        };
+    }
+
+    createCollectables(collectableLayer){
+        const collectables = new Collectables(this).setDepth(-1);
+
+        collectables.addFromLayer(collectableLayer);
+        collectables.playAnimation('diamond-shine');
+
+        return collectables;
     }
 
     createPlayer (start)
@@ -98,6 +131,12 @@ class Play extends Phaser.Scene
         return enemies;
     }
 
+    onCollect(entity, collectable){
+        this.score += collectable.score;
+        this.hud.updateScoreboard(this.score);
+        collectable.disableBody(true, true);
+    }
+
     onPlayerCollision (enemy, player)
     {
         player.takesHit(enemy);
@@ -107,10 +146,12 @@ class Play extends Phaser.Scene
     {
         player
             .addCollider(colliders.platform_colliders)
-            .addCollider(colliders.projectiles, this.onWeaponHit);
+            .addCollider(colliders.projectiles, this.onHit)
+            .addCollider(colliders.traps, this.onHit)
+            .addOverlap(colliders.collectables, this.onCollect, this)
     }
 
-    onWeaponHit (entity, source)
+    onHit (entity, source)
     {
         entity.takesHit(source);
     }
@@ -120,8 +161,8 @@ class Play extends Phaser.Scene
         enemies
             .addCollider(colliders.platform_colliders)
             .addCollider(colliders.player, this.onPlayerCollision)
-            .addCollider(colliders.player.projectiles, this.onWeaponHit)
-            .addOverlap(colliders.player.meleeWeapon, this.onWeaponHit);
+            .addCollider(colliders.player.projectiles, this.onHit)
+            .addOverlap(colliders.player.meleeWeapon, this.onHit);
     }
 
     setupFollowupCameraOn(player)

@@ -11,9 +11,18 @@ class Preload extends Phaser.Scene
 
     preload ()
     {
-        this.load.tilemapTiledJSON('map', 'assets/crystal_world_map.json');
+        this.load.tilemapTiledJSON('level_1', 'assets/crystal_world_map_level_1.json');
+        this.load.tilemapTiledJSON('level_2', 'assets/crystal_world_map_level_2.json');
+
         this.load.image('tiles-1', 'assets/main_lev_build_1.png');
         this.load.image('tiles-2', 'assets/main_lev_build_2.png');
+        this.load.image('bg-spikes-tileset', 'assets/bg_spikes_tileset.png');
+
+        this.load.image('bg-spikes-dark', 'assets/bg_spikes_dark.png');
+        this.load.image('sky-play', 'assets/sky_play.png');
+        
+        this.load.image('menu-bg', 'assets/background01.png');
+        this.load.image('back', 'assets/back.png');
 
         this.load.image('iceball-1', 'assets/weapons/iceball_001.png');
         this.load.image('iceball-2', 'assets/weapons/iceball_002.png');
@@ -43,11 +52,20 @@ class Preload extends Phaser.Scene
         this.load.spritesheet('hit-sheet', 'assets/weapons/hit_effect_sheet.png', {frameWidth: 32, frameHeight: 32})
 
         this.load.spritesheet('sword-default', 'assets/weapons/sword_sheet_1.png', {frameWidth: 52, frameHeight: 32, spacing: 16})
+
+        this.load.audio('theme', 'assets/music/theme_music.wav')
+
+        this.load.once('complete', () =>{
+            this.startGame();
+        })
     }
 
-    create ()
+    startGame ()
     {
-        this.scene.start('PlayScene');
+        this.registry.set('level', 1);
+        this.registry.set('unlocked-levels', 1);
+
+        this.scene.start('MenuScene');
     }
 }
 

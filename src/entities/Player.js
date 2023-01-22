@@ -6,6 +6,8 @@ import collidable from '../mixins/collidable';
 import anims from '../mixins/anims';
 import Projectiles from '../attacks/Projectiles';
 import MeleeWeapon from '../attacks/MeleeWeapon';
+
+import EventEmitter from '../events/Emitter';
 import { getTimestamp } from '../utils/functions';
 
 class Player extends Phaser.Physics.Arcade.Sprite
@@ -27,7 +29,7 @@ class Player extends Phaser.Physics.Arcade.Sprite
 
     init()
     {
-        this.gravity = 500;
+        this.gravity = 400;
         this.playerSpeed = 200;
         this.jumpCount = 0;
         this.consecutiveJumps = 1;
@@ -41,7 +43,7 @@ class Player extends Phaser.Physics.Arcade.Sprite
         this.meleeWeapon = new MeleeWeapon(this.scene, 0, 0, 'sword-default');
         this.timeFromLastSwing = null;
 
-        this.health = 100;
+        this.health = 20;
         this.hp = new HealthBar(
             this.scene,
             this.scene.config.leftTopCorner.x + 5,
@@ -69,7 +71,13 @@ class Player extends Phaser.Physics.Arcade.Sprite
 
     update()
     {
-        if (this.hasBeenHit || this.isSliding) { return; }
+        if (this.hasBeenHit || this.isSliding || !this.body) { return; }
+
+        if(this.getBounds().top > this.scene.config.height + 50){
+            EventEmitter.emit('PLAYER_LOSE');
+            return;
+        }
+
         const { left, right, space} = this.cursors;
         const isSpaceJustDown = Phaser.Input.Keyboard.JustDown(space);
         const onFloor = this.body.onFloor();
@@ -178,11 +186,17 @@ class Player extends Phaser.Physics.Arcade.Sprite
     takesHit (source)
     {
         if (this.hasBeenHit) { return; }
+
+        this.health -= source.damage || source.properties.damage || 0;
+        if(this.health <= 0){
+            EventEmitter.emit('PLAYER_LOSE');
+            return;
+        }
+
         this.hasBeenHit = true;
         this.bounceOff(source);
         const hitAnim = this.playDamageTween();
 
-        this.health -= source.damage || source.properties.damage || 0;
         this.hp.decrease(this.health);
 
         source.deliversHit && source.deliversHit(this);

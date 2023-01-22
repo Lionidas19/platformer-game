@@ -3,6 +3,9 @@ import Phaser, { Scene } from "phaser";
 
 import PlayScene from './scenes/Play';
 import PreloadScene from './scenes/Preload';
+import MenuScene from "./scenes/Menu";
+import LevelsScene from "./scenes/Levels";
+import CreditsScene from "./scenes/Credits";
 
 const MAP_WIDTH = 1600;
 
@@ -23,10 +26,15 @@ const SHARED_CONFIG = {
   rightTopCorner: {
     x: (WIDTH / ZOOM_FACTOR) + ((WIDTH - (WIDTH / ZOOM_FACTOR)) / 2),
     y: (HEIGHT - (HEIGHT / ZOOM_FACTOR)) / 2
-  }
+  },
+  rightBottomCorner: {
+    x: (WIDTH / ZOOM_FACTOR) + ((WIDTH - (WIDTH / ZOOM_FACTOR)) / 2),
+    y: (HEIGHT / ZOOM_FACTOR) + ((HEIGHT - (HEIGHT / ZOOM_FACTOR)) / 2)
+  },
+  lastLevel: 2
 }
 
-const Scenes = [PreloadScene , PlayScene];
+const Scenes = [PreloadScene, MenuScene, LevelsScene, PlayScene, CreditsScene];
 const createScene = Scene => new Scene(SHARED_CONFIG)
 const initScenes = () => Scenes.map(createScene)
 

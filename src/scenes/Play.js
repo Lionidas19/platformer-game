@@ -5,6 +5,7 @@ import Enemies from '../groups/Enemies';
 import Collectable from '../collectables/Collectable';
 import Collectables from '../groups/Collectables';
 import Hud from '../hud';
+import EventEmitter from '../events/Emitter';
 
 import initAnims from '../anims/index';
 
@@ -17,14 +18,14 @@ class Play extends Phaser.Scene
         this.config = config;
     }
 
-    create ()
+    create ({gameStatus})
     {
         this.score = 0;
-
         this.hud = new Hud(this, 0, 0);
 
-        const map = this.createMap();
+        this.playBgMusic();
 
+        const map = this.createMap();
         initAnims(this.anims);
 
         const layers = this.createLayers(map);
@@ -32,6 +33,8 @@ class Play extends Phaser.Scene
         const player = this.createPlayer(playerZones.start);
         const enemies = this.createEnemies(layers.enemySpawns, layers.platform_colliders);
         const collectables = this.createCollectables(layers.collectables);
+
+        this.createBG(map);
 
         this.createPlayerColliders(player, {colliders: {
             platform_colliders: layers.platform_colliders,
@@ -44,8 +47,12 @@ class Play extends Phaser.Scene
             platform_colliders: layers.platform_colliders, player
         }})
 
+        this.createBackButton();
         this.createEndOfLevel(playerZones.end, player);
         this.setupFollowupCameraOn(player);
+
+        if(gameStatus === 'PLAYER_LOSE') {return;}
+        this.createGameEvents()
     }
 
     finishDrawing (pointer, layer)
@@ -70,18 +77,28 @@ class Play extends Phaser.Scene
         this.plotting = false;
     }
 
+    playBgMusic(){
+        if(this.sound.get('theme')) { return; }
+        this.sound.add('theme', {loop: true, volume: 0.03}).play();
+    }
+
     createMap ()
     {
-        const map = this.make.tilemap({key: 'map'});
+        const map = this.make.tilemap({key: `level_${this.getCurrentLevel()}`});
         const tileset1 = map.addTilesetImage('main_lev_build_1', 'tiles-1');
+        const tileset2 = map.addTilesetImage('bg_spikes_tileset', 'bg-spikes-tileset');
         return map;
     }
 
     createLayers (map)
     {
         const tileset = map.getTileset('main_lev_build_1');
-        const environment = map.createStaticLayer('environment', tileset).setDepth(-2);
+        const tilesetBg = map.getTileset('bg_spikes_tileset');
+        
+        map.createStaticLayer('distance', tilesetBg).setDepth(-13);
+
         const platform_colliders = map.createStaticLayer('platform_colliders', tileset);
+        const environment = map.createStaticLayer('environment', tileset).setDepth(-2);
         const platforms = map.createStaticLayer('platforms', tileset);
         const playerZones = map.getObjectLayer('player_zones');
         const enemySpawns = map.getObjectLayer('enemy_spawns');
@@ -101,6 +118,38 @@ class Play extends Phaser.Scene
             collectables,
             traps
         };
+    }
+
+    createBG(map){
+        const bgObject = map.getObjectLayer('distance_bg').objects[0];
+        this.spikesImage = this.add.tileSprite(bgObject.x, bgObject.y, this.config.width, bgObject.height, 'bg-spikes-dark')
+            .setOrigin(0, 1)
+            .setDepth(-10)
+            .setScrollFactor(0, 1)
+
+        this.skyImage = this.add.tileSprite(0, 0, this.config.width, 180, 'sky-play')
+            .setOrigin(0, 0)
+            .setDepth(-11)
+            .setScale(1.1)
+            .setScrollFactor(0, 1)
+    }
+
+    createBackButton(){
+        const btn = this.add.image(this.config.rightBottomCorner.x, this.config.rightBottomCorner.y, 'back')
+            .setOrigin(1)
+            .setScrollFactor(0)
+            .setScale(2)
+            .setInteractive();
+
+        btn.on('pointerup', () => {
+            this.scene.start('MenuScene');
+        })
+    }
+
+    createGameEvents(){
+        EventEmitter.on('PLAYER_LOSE', () => {
+            this.scene.restart({gameStatus: 'PLAYER_LOSE'});
+        })
     }
 
     createCollectables(collectableLayer){
@@ -182,6 +231,10 @@ class Play extends Phaser.Scene
         }
     } 
 
+    getCurrentLevel(){
+        return this.registry.get('level') || 1;
+    }
+
     createEndOfLevel(end, player)
     {
         const endOfLevel = this.physics.add.sprite(end.x, end.y, 'end')
@@ -191,8 +244,21 @@ class Play extends Phaser.Scene
 
         const eolOverlap = this.physics.add.overlap(player, endOfLevel, () => {
             eolOverlap.active = false;
-            console.log('Player has won!');
+
+            if(this.registry.get('level') === this.config.lastLevel){
+                this.scene.start('CreditsScene');
+                return;
+            }
+
+            this.registry.inc('level', 1);
+            this.registry.inc('unlocked-levels', 1);
+            this.scene.restart({gameStatus: 'LEVEL_COMPLETED'})
         })
+    }
+
+    update(){
+        this.spikesImage.tilePositionX = this.cameras.main.scrollX * 0.3;
+        this.skyImage.tilePositionX = this.cameras.main.scrollX * 0.1;
     }
 }
 
